@@ -1,0 +1,17 @@
+# Node
+node_modules/
+
+# Logs
+*.log
+
+# Env
+.env
+backend/.env
+frontend/.env
+
+# Build files
+frontend/dist/
+backend/build/
+
+# IDE
+.vscode/
