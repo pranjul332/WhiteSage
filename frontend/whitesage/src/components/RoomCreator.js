@@ -1,34 +1,54 @@
+// components/RoomCreator.js
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth0 } from "@auth0/auth0-react";
+import axios from "axios";
 
 export default function RoomCreator({ onCancel }) {
   const router = useRouter();
-  const [userName, setUserName] = useState("");
-  const [loading, setLoading] = useState(false);
+  const { getAccessTokenSilently ,user } = useAuth0();
+  const [roomName, setRoomName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState("");
 
-  const createRoom = async () => {
-    if (!userName.trim()) return;
+  const handleCreateRoom = async () => {
+    if (!roomName.trim()) {
+      setError("Please enter a room name");
+      return;
+    }
 
-    setLoading(true);
+    setIsCreating(true);
+    setError("");
+
     try {
-      const response = await fetch("http://localhost:5000/api/rooms/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ creatorName: userName }),
-      });
+      // Get the access token
+      const token = await getAccessTokenSilently();
 
-      const data = await response.json();
-      if (data.roomId) {
-        localStorage.setItem("userName", userName);
-        router.push(`/room/${data.roomId}`);
-      }
+      // Create the room via API
+      const response = await axios.post(
+        `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+        }/api/rooms`,
+        {
+          name: roomName,
+          creatorName: user?.name || "Anonymous",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Navigate to the new room
+      router.push(`/room/${response.data.roomId}`);
     } catch (error) {
-      console.error("Error creating room:", error);
-      setLoading(false);
+      console.error("Failed to create room:", error);
+      setError("Failed to create room. Please try again.");
+      setIsCreating(false);
     }
   };
 
@@ -36,22 +56,27 @@ export default function RoomCreator({ onCancel }) {
     <div className="space-y-4">
       <input
         type="text"
-        placeholder="Your name"
-        value={userName}
-        onChange={(e) => setUserName(e.target.value)}
+        placeholder="Enter Room Name"
+        value={roomName}
+        onChange={(e) => setRoomName(e.target.value)}
         className="w-full p-3 border border-gray-300 rounded-md"
+        disabled={isCreating}
       />
+
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+
       <div className="flex space-x-2">
         <button
-          onClick={createRoom}
-          disabled={loading}
-          className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-300"
+          onClick={handleCreateRoom}
+          disabled={isCreating}
+          className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
         >
-          {loading ? "Creating..." : "Create Room"}
+          {isCreating ? "Creating..." : "Create"}
         </button>
         <button
           onClick={onCancel}
-          className="flex-1 py-3 px-4 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+          disabled={isCreating}
+          className="flex-1 py-3 px-4 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:bg-gray-400"
         >
           Cancel
         </button>

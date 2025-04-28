@@ -4,11 +4,13 @@ const roomsManager = require("../rooms");
 const { v4: uuidv4 } = require("uuid");
 
 
-router.post("/create", (req, res) => {
-  const { creatorName } = req.body;
+router.post("/", (req, res) => {
+  const { name, creatorName } = req.body;
 
-  if (!creatorName) {
-    return res.status(400).json({ error: "Creator name is required" });
+  if (!name || !creatorName) {
+    return res
+      .status(400)
+      .json({ error: "Room name and creator name are required" });
   }
 
   const roomId = uuidv4().substring(0, 8); // Generate a shorter room ID
@@ -22,7 +24,7 @@ router.get("/:roomId", (req, res) => {
   const { roomId } = req.params;
   const room = roomsManager.getRoom(roomId);
 
-  if (!room) {
+  if (!room) { 
     return res.status(404).json({ error: "Room not found" });
   }
 
